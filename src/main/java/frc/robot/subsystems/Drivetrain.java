@@ -16,6 +16,7 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.units.measure.Voltage;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -32,6 +33,9 @@ public class Drivetrain extends SubsystemBase {
 
     private final RelativeEncoder lEncoder; // Left Drive Encoder
     private final RelativeEncoder rEncoder; // Right Drive Encoder
+
+    private double inputL;
+    private double inputR;
 
     /**
      * Constructor
@@ -67,32 +71,36 @@ public class Drivetrain extends SubsystemBase {
 
         lfConfig.encoder.positionConversionFactor(distPerRev); // Set the left encoder position conversion factor
 
-        lfMotor.configure(lfConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
+        lfMotor.configure(lfConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
         // Configure Left Rear Motor
         SparkMaxConfig lrConfig = new SparkMaxConfig();
 
         lrConfig.follow(lfMotor); // Set left rear motor to follow left front motor
 
-        lrMotor.configure(lrConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
+        lrMotor.configure(lrConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
         // Configure Right Front Motor
         SparkMaxConfig rfConfig = new SparkMaxConfig();
 
         rfConfig.encoder.positionConversionFactor(distPerRev); // Set the right encoder position conversion factor
+        rfConfig.inverted(true);
 
-        rfMotor.configure(rfConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
+        rfMotor.configure(rfConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
         // Configure Left Rear Motor
         SparkMaxConfig rrConfig = new SparkMaxConfig();
 
         rrConfig.follow(rfMotor); // Set right rear motor to follow right front motor
 
-        rrMotor.configure(rrConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
+        rrMotor.configure(rrConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
         // Get drive encoders
         lEncoder = lfMotor.getEncoder();
         rEncoder = rfMotor.getEncoder();
+
+        inputL = 0;
+        inputR = 0;
     }
 
     /**
@@ -102,6 +110,8 @@ public class Drivetrain extends SubsystemBase {
      * @param right voltage to apply to the right drive motors
      */
     public void setDrive(Voltage left, Voltage right) {
+        inputL = left.magnitude();
+        inputR = right.magnitude();
         lfMotor.setVoltage(left);
         rfMotor.setVoltage(right);
     }
@@ -166,5 +176,11 @@ public class Drivetrain extends SubsystemBase {
                 this.startEnd( // Sets the drive motors to equal but opposite voltages at the starts and turns
                                // them off a the end
                         () -> setDrive(voltage, voltage.unaryMinus()), () -> setDrive(Volts.zero(), Volts.zero())));
+    }
+
+    @Override
+    public void periodic(){
+        SmartDashboard.putNumber("Left Values", inputL);
+        SmartDashboard.putNumber("Right Values", inputR);
     }
 }
