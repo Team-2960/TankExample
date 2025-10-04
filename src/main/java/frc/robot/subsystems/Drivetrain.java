@@ -4,6 +4,7 @@ import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
 
+import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Inches;
 import static edu.wpi.first.units.Units.Volts;
 
@@ -13,13 +14,20 @@ import com.revrobotics.RelativeEncoder;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.config.SparkMaxConfig;
 
+import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.PIDCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.util.BNO055;
+import frc.robot.util.BNO055.opmode_t;
+import frc.robot.util.BNO055.vector_type_t;
 
 /**
  * Manages the robot drivetrain Drivetrain
@@ -34,8 +42,14 @@ public class Drivetrain extends SubsystemBase {
     private final RelativeEncoder lEncoder; // Left Drive Encoder
     private final RelativeEncoder rEncoder; // Right Drive Encoder
 
+    private final BNO055 imu;
+
     private double inputL;
     private double inputR;
+
+    private Rotation2d rotation2d;
+
+    private PIDController anglePID;
 
     /**
      * Constructor
@@ -61,6 +75,8 @@ public class Drivetrain extends SubsystemBase {
         lrMotor = new SparkMax(lrMotorID, MotorType.kBrushless);
         rfMotor = new SparkMax(rfMotorID, MotorType.kBrushless);
         rrMotor = new SparkMax(rrMotorID, MotorType.kBrushless);
+
+
 
         // Calculate the position conversion factor
         double distPerRev = wheelRadius.in(Inches) * Math.PI * driveRatio; // Distance traveled for one revolution of
@@ -99,6 +115,14 @@ public class Drivetrain extends SubsystemBase {
         lEncoder = lfMotor.getEncoder();
         rEncoder = rfMotor.getEncoder();
 
+        //Setup IMU
+        imu = BNO055.getInstance(opmode_t.OPERATION_MODE_IMUPLUS, vector_type_t.VECTOR_EULER);
+
+        //Setup PID
+
+        anglePID = new PIDController(0, 0, 0);
+        anglePID.enableContinuousInput(-180, 180);
+
         inputL = 0;
         inputR = 0;
     }
@@ -135,6 +159,15 @@ public class Drivetrain extends SubsystemBase {
     public void resetDistance() {
         lEncoder.setPosition(0);
         rEncoder.setPosition(0);
+    }
+    
+
+    public Rotation2d getRotation2d(){
+        
+        int times = (int) imu.getHeading()/180;
+        int multiplier = (times%2 == 1) ? 1 : 0;
+        double newAngle = imu.getHeading() - (180 * times) - (180 * multiplier);
+        return Rotation2d.fromDegrees(newAngle);
     }
 
     /**
@@ -178,9 +211,17 @@ public class Drivetrain extends SubsystemBase {
                         () -> setDrive(voltage, voltage.unaryMinus()), () -> setDrive(Volts.zero(), Volts.zero())));
     }
 
+    // public Command getTurnAngleCmd(Angle angle, Angle threshold){
+    //     //double voltage = anglePID.calculate(getRotation2d().getDegrees(), angle.in(Degrees));
+
+    //     //TODO ADD COMMAND CODE
+    // }
+
     @Override
     public void periodic(){
         SmartDashboard.putNumber("Left Values", inputL);
         SmartDashboard.putNumber("Right Values", inputR);
+        SmartDashboard.putNumber("Robot Angle", getRotation2d().getDegrees());
+        SmartDashboard.putNumber("Raw Angle", imu.getHeading());
     }
 }
