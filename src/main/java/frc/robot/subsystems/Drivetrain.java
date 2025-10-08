@@ -147,10 +147,21 @@ public class Drivetrain extends SubsystemBase {
     public void driveLMotor(Voltage voltage){
         lfMotor.setVoltage(voltage);
     }
-    
+
     public void driveBMotor(Voltage voltage){
         lfMotor.setVoltage(voltage);
         rfMotor.setVoltage(voltage);
+    }
+
+    /**
+     * 
+     * @param tarAngle
+     * Target Angle of Robot (input degrees)
+     */
+    public void goToAngle(Angle tarAngle){
+        double voltage = anglePID.calculate(getRotation2d().getDegrees(), tarAngle.magnitude());
+        lfMotor.set(-voltage);
+        rfMotor.set(voltage);
     }
 
     /**
