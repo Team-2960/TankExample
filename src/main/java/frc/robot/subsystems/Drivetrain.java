@@ -140,6 +140,10 @@ public class Drivetrain extends SubsystemBase {
         rfMotor.setVoltage(right);
     }
 
+    public void driveRMotor(Voltage voltage){
+        rfMotor.setVoltage(voltage);
+    }
+
     /**
      * Gets the average distance traveled by both sides of the drivetrain
      * 
@@ -180,6 +184,13 @@ public class Drivetrain extends SubsystemBase {
         return this.runEnd(
                 () -> setDrive(left.get(), right.get()),
                 () -> setDrive(Volts.zero(), Volts.zero()));
+    }
+
+    public Command getDriveRMotorCmd(Supplier<Voltage> voltage){
+        return this.runEnd( 
+            () -> driveRMotor(voltage.get()),
+            () -> driveRMotor(Volts.zero())
+        );
     }
 
     /**
